@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 
+import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.FluidFillable;
@@ -60,7 +61,65 @@ public class FlowWater {
         } else {
             System.out.println("Can't set water >8 something went very wrong!");
         }
+        if (level <8 && level >0) {
+
+            int x = pos.getX();
+            System.out.println(x);
+            int y = pos.getY() - 1;
+            int z = pos.getZ();
+
+            for (int dx = x-1; dx <= x+1; dx++) {
+                for (int dz = z-1; dz <= z+1; dz++) {
+                    if (dx == 0 && dz == 0)
+                        System.out.println("Not Adjacent");
+                    else {
+                        BlockPos currentPos = new BlockPos(dx,y,dz);
+                        int currentLevel = world.getBlockState(currentPos).getFluidState().getLevel();
+                        if (world.getBlockState(currentPos).getBlock() == Blocks.AIR){
+                            System.out.println("amonger");
+                            if (world.getBlockState(pos).getFluidState().getLevel() == 1)
+                            {
+                                world.setBlockState(pos, Blocks.AIR.getDefaultState(), 11);
+                                world.setBlockState(currentPos, Fluids.FLOWING_WATER.getFlowing(currentLevel+1, false).getBlockState(), 11);
+                            }
+                            /*else
+                            {
+                                world.setBlockState(pos, Fluids.FLOWING_WATER.getFlowing(level - 1, false).getBlockState(), 11);
+                                world.setBlockState(currentPos, Fluids.FLOWING_WATER.getFlowing(currentLevel+level, false).getBlockState(), 11);
+                            }*/
+                        }
+                        else {
+                            if (world.getBlockState(currentPos).getBlock() == Blocks.WATER && world.getFluidState(currentPos).getLevel() <8) {
+
+                                if (world.getFluidState(pos).getLevel() == 1)
+                                {
+                                    System.out.println("sussy imposter caught 1");
+                                    world.setBlockState(pos, Blocks.AIR.getDefaultState(), 11);
+                                    world.setBlockState(currentPos, Fluids.FLOWING_WATER.getFlowing(currentLevel+1, false).getBlockState(), 11);
+
+                                }
+                                /*else // imposter is not here
+                                {
+                                    world.setBlockState(pos, Fluids.FLOWING_WATER.getFlowing(level-1 , false).getBlockState(), 11);
+                                    if (currentLevel+1 < 7) {
+                                        world.setBlockState(currentPos, Fluids.FLOWING_WATER.getFlowing(currentLevel+1, false).getBlockState(), 11);
+                                    }
+                                    else
+                                        System.out.println("sussy imposter caught 2");
+                                        if (currentLevel+1 == 8) {
+                                        world.setBlockState(currentPos, Blocks.WATER., 11);
+                                    }
+                                }*/
+
+                            }
+                        }
+
+                    }
+                }
+            }
+        }
     }
+
 
     public static void addWater(int level, BlockPos pos, WorldAccess world) {
         int existingwater = getWaterLevel(pos, world);
