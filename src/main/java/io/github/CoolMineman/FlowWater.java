@@ -5,7 +5,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.FluidFillable;
@@ -15,8 +14,7 @@ import net.minecraft.fluid.WaterFluid;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.WorldAccess;
-import net.minecraft.world.biome.Biome;
-import net.minecraft.world.biome.BiomeKeys;
+
 
 public class FlowWater {
     private FlowWater() {
@@ -163,7 +161,7 @@ public class FlowWater {
         int x2 = center.getX();
         int y2 = center.getY() - 1;
         int z2 = center.getZ();
-        int radiusCheck = 2;
+        int radiusCheck = 3;
         int adjustX = 0;
         int adjustZ = 0;
         int count = 0;
@@ -171,30 +169,35 @@ public class FlowWater {
 
         for (int dx2 = x2 - radiusCheck; dx2 <= x2 + radiusCheck; dx2++) {
             for (int dz2 = z2 - radiusCheck; dz2 <= z2 + radiusCheck; dz2++) {
-                    BlockPos checkPos = new BlockPos(dx2, y2, dz2);
-                    if (world.getFluidState(checkPos).getLevel() < 8) {
-                        if (world.getBlockState(checkPos).getBlock() == Blocks.WATER) {
-                            //System.out.println("amoger");
-                            level7count += 1;
-                        }
-
+                BlockPos checkPos = new BlockPos(dx2, y2, dz2);
+                if (world.getFluidState(checkPos).getLevel() < 8) {
+                    if (world.getBlockState(checkPos).getBlock() == Blocks.WATER) {
+                        //System.out.println("amoger");
+                        level7count += 1;
                     }
+
+                }
                 if (level7count > 0) {
                     //System.out.println("amoger 1");
                     method1(blocks, center, world);
                     level7count = 0;
                 }
+            }
+        }
+
                 //end
 
                 for (int dx = x - radius; dx <= x + radius; dx++) {
                     for (int dz = z - radius; dz <= z + radius; dz++) {
                         BlockPos internalPos = new BlockPos(dx, y, dz);
                         counter += 1;
+                        //if (world.g)
                         if (world.getBlockState(internalPos).getBlock() == Blocks.WATER || world.getBlockState(internalPos).getBlock() == Blocks.AIR) {
                             int ilevel = world.getFluidState(internalPos).getLevel();
                             matrixLevels.add(ilevel);
                         }
-                        if (counter == 9) {
+                        if (counter == 9 && matrixLevels.size() > 0) {
+                            //System.out.println(matrixLevels);
                             int maxLevel = Collections.max(matrixLevels);
                             int minLevel = Collections.min(matrixLevels);
                             int range = maxLevel - minLevel;
@@ -207,13 +210,15 @@ public class FlowWater {
                                 method1(blocks, center, world);
                             }
                             matrixLevels.clear();
-                            counter = 0;
+                            //counter = 0;
                         }
                     }
                 }
             }
-        }
-    }
+
+
+
+
 
 
     public static void method1(ArrayList<BlockPos> blocks, BlockPos center, WorldAccess world) {
