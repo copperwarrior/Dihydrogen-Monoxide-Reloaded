@@ -14,6 +14,7 @@ import net.minecraft.fluid.WaterFluid;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.WorldAccess;
+import org.lwjgl.system.CallbackI;
 
 
 public class FlowWater {
@@ -64,67 +65,83 @@ public class FlowWater {
         } else {
             System.out.println("Can't set water >8 something went very wrong!");
         }
-        if (level < 8 && level > 0) {
 
-            int radius = 1;
+        if (world.getFluidState(pos).getLevel() == 1) {
+
+            int pradius = 4;
             int x = pos.getX();
-            int y = pos.getY() - 1;
-            int uy = pos.getY();
+            int y = pos.getY();
+            int uy = pos.getY() - 1;
             int z = pos.getZ();
+            int count = 0;
 
 
-            for (int dx = x - radius; dx <= x + radius; dx++) {
-                for (int dz = z - radius; dz <= z + radius; dz++) {
-                    if (dx != 0 && dz != 0) {
+            //puddle feature start
+            for (int dx = x - pradius; dx <= x + pradius; dx++) {
+                for (int dz = z - pradius; dz <= z + pradius; dz++) {
+                    //System.out.println("catch 1");
+                    BlockPos currentPos = new BlockPos(dx, y, dz);
+                    BlockPos checkBelow = new BlockPos(dx, uy, dz);
+                    BlockPos newWaterPos = new BlockPos(0, 0, 0);
+                    BlockPos emptyBp = new BlockPos(0,128,0);
+                    String direction = "";
+                    Boolean doHop = false;
+                    count += 1;
+                    if (checkBelow != pos.down() && currentPos != pos) {
 
-                        BlockPos checkAbove = new BlockPos(dx, uy, dz);
-                        if (world.getBlockState(pos.north()) == Blocks.AIR.getDefaultState() &&
-                                world.getBlockState(pos.east()) == Blocks.AIR.getDefaultState() &&
-                                world.getBlockState(pos.west()) == Blocks.AIR.getDefaultState() &&
-                                world.getBlockState(pos.south()) == Blocks.AIR.getDefaultState()) {
-
-                            BlockPos currentPos = new BlockPos(dx, y, dz);
-                            int currentLevel = world.getBlockState(currentPos).getFluidState().getLevel();
-                            if (world.getBlockState(currentPos).getBlock() == Blocks.AIR) {
-
-                                if (world.getBlockState(pos).getFluidState().getLevel() == 1) {
-                                    world.setBlockState(pos, Blocks.AIR.getDefaultState(), 11);
-                                    world.setBlockState(currentPos, Fluids.FLOWING_WATER.getFlowing(currentLevel + 1, false).getBlockState(), 11);
-                                }
-
-                            } else {
-                                if (world.getBlockState(currentPos).getBlock() == Blocks.WATER && world.getFluidState(currentPos).getLevel() < 8) {
-
-                                    if (world.getFluidState(pos).getLevel() == 1) {
-                                        world.setBlockState(pos, Blocks.AIR.getDefaultState(), 11);
-                                        world.setBlockState(currentPos, Fluids.FLOWING_WATER.getFlowing(currentLevel + 1, false).getBlockState(), 11);
-
-                                    }
-
-                                }
-                            }
+                        if (world.getBlockState(checkBelow).canBucketPlace(Fluids.WATER) && (world.getFluidState(checkBelow).getLevel() != 8)) {
+                            //System.out.println("catch 2");
+                            doHop = true;
                         }
 
+                            if (doHop == true) {
+                                if (currentPos.getX() > pos.getX()) {
+                                    direction = "east";
+                                } else {
+                                    if (currentPos.getX() < pos.getX()) {
+                                        direction = "west";
+                                    } else {
+                                        if (currentPos.getZ() > pos.getZ()) {
+                                            direction = "south";
+                                        } else {
+                                            if (currentPos.getZ() < pos.getZ()) {
+                                                direction = "north";
+                                            }
+                                        }
+
+                                    }
+                                }
+
+                                if (direction.equals("north")) {
+                                    newWaterPos = pos.north();
+                                }
+                                if (direction.equals("south")) {
+                                    newWaterPos = pos.south();
+                                }
+                                if (direction.equals("east")) {
+                                    newWaterPos = pos.east();
+                                }
+                                if (direction.equals("west")) {
+                                    newWaterPos = pos.west();
+                                }
+                                //System.out.println("catch 3");
+                                if (world.getBlockState(pos).getBlock() == Blocks.WATER && newWaterPos.getY() == pos.getY() && world.getBlockState(newWaterPos).getBlock() == Blocks.AIR) {
+                                    int oldlevel = world.getFluidState(newWaterPos).getLevel();
+                                    //System.out.println("oldlevel " + oldlevel);
+                                    world.setBlockState(newWaterPos, Fluids.FLOWING_WATER.getFlowing(1, false).getBlockState(), 11);
+                                    world.setBlockState(pos, Blocks.AIR.getDefaultState(), 11);
+                                }
+
+
+                            }
+                        }
+                        //puddle feature end
                     }
                 }
             }
         }
-    }
+    //}
 
-    public static void l2Fixer(BlockPos pos, int level, WorldAccess world) {
-
-        int x = pos.getX();
-        int y = pos.getY() - 1;
-        int uy = pos.getY();
-        int z = pos.getZ();
-        int radiusCheck = 2;
-        int adjustX = 0;
-        int adjustZ = 0;
-        int count = 0;
-        int level7count = 0;
-
-
-    }
 
     public static void addWater(int level, BlockPos pos, WorldAccess world) {
         int existingwater = getWaterLevel(pos, world);
@@ -145,58 +162,28 @@ public class FlowWater {
         for (BlockPos block : blocks) {
             waterlevels[blocks.indexOf(block)] = getWaterLevel(block, world);
         }
-        int waterlevelsnum = waterlevels.length;
+/*        int waterlevelsnum = waterlevels.length;
         int didnothings = 0;
-        int waterlevel;
+        int waterlevel;*/
         List<Integer> matrixLevels = new ArrayList<>(Arrays.asList());
-
 
         int x = center.getX();
         int y = center.getY();
         int z = center.getZ();
-        int radius = 1;
+        int radius = 2;
+        int diameter = (radius*2)+1;
         int counter = 0;
-
-        //start
-        int x2 = center.getX();
-        int y2 = center.getY() - 1;
-        int z2 = center.getZ();
-        int radiusCheck = 3;
-        int adjustX = 0;
-        int adjustZ = 0;
-        int count = 0;
-        int level7count = 0;
-
-        for (int dx2 = x2 - radiusCheck; dx2 <= x2 + radiusCheck; dx2++) {
-            for (int dz2 = z2 - radiusCheck; dz2 <= z2 + radiusCheck; dz2++) {
-                BlockPos checkPos = new BlockPos(dx2, y2, dz2);
-                if (world.getFluidState(checkPos).getLevel() < 8) {
-                    if (world.getBlockState(checkPos).getBlock() == Blocks.WATER) {
-                        //System.out.println("amoger");
-                        level7count += 1;
-                    }
-
-                }
-                if (level7count > 0) {
-                    //System.out.println("amoger 1");
-                    method1(blocks, center, world);
-                    level7count = 0;
-                }
-            }
-        }
-
-                //end
+        int countEnd = diameter*diameter;
 
                 for (int dx = x - radius; dx <= x + radius; dx++) {
                     for (int dz = z - radius; dz <= z + radius; dz++) {
                         BlockPos internalPos = new BlockPos(dx, y, dz);
                         counter += 1;
-                        //if (world.g)
                         if (world.getBlockState(internalPos).getBlock() == Blocks.WATER || world.getBlockState(internalPos).getBlock() == Blocks.AIR) {
                             int ilevel = world.getFluidState(internalPos).getLevel();
                             matrixLevels.add(ilevel);
                         }
-                        if (counter == 9 && matrixLevels.size() > 0) {
+                        if (counter == countEnd && matrixLevels.size() > 0) {
                             //System.out.println(matrixLevels);
                             int maxLevel = Collections.max(matrixLevels);
                             int minLevel = Collections.min(matrixLevels);
@@ -210,8 +197,9 @@ public class FlowWater {
                                 method1(blocks, center, world);
                             }
                             matrixLevels.clear();
-                            //counter = 0;
+                            counter = 0;
                         }
+
                     }
                 }
             }
