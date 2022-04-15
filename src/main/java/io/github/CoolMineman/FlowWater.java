@@ -62,85 +62,99 @@ public class FlowWater {
             world.setBlockState(pos, Blocks.AIR.getDefaultState(), 11);
         } else if (level < 8) {
             world.setBlockState(pos, Fluids.FLOWING_WATER.getFlowing(level, false).getBlockState(), 11);
-        } else {
-            System.out.println("Can't set water >8 something went very wrong!");
         }
+            if (level == 1) {
 
-        if (world.getFluidState(pos).getLevel() == 1) {
+                int maxRadius = 5;
+                int maxDia = (maxRadius * 2) + 1;
+                int maxArea = maxDia * 2;
+                int currentRadius = 1;
+                int x = pos.getX();
+                int y = pos.getY();
+                int uy = pos.getY() - 1;
+                int z = pos.getZ();
+                int count = 0;
+                boolean didJump = false;
 
-            int pradius = 4;
-            int x = pos.getX();
-            int y = pos.getY();
-            int uy = pos.getY() - 1;
-            int z = pos.getZ();
-            int count = 0;
+
+                //puddle feature start
 
 
-            //puddle feature start
-            for (int dx = x - pradius; dx <= x + pradius; dx++) {
-                for (int dz = z - pradius; dz <= z + pradius; dz++) {
-                    //System.out.println("catch 1");
-                    BlockPos currentPos = new BlockPos(dx, y, dz);
-                    BlockPos checkBelow = new BlockPos(dx, uy, dz);
-                    BlockPos newWaterPos = new BlockPos(0, 0, 0);
-                    BlockPos emptyBp = new BlockPos(0,128,0);
-                    String direction = "";
-                    Boolean doHop = false;
-                    count += 1;
-                    if (checkBelow != pos.down() && currentPos != pos) {
+                    for (int dx = x - currentRadius; dx <= x + currentRadius; dx++) {
+                        for (int dz = z - currentRadius; dz <= z + currentRadius; dz++) {
+                            int currDiameter = (currentRadius * 2) + 1;
+                            int currArea = currDiameter * currDiameter;
 
-                        if (world.getBlockState(checkBelow).canBucketPlace(Fluids.WATER) && (world.getFluidState(checkBelow).getLevel() != 8)) {
-                            //System.out.println("catch 2");
-                            doHop = true;
-                        }
+                            if (didJump == false && world.getBlockState(pos.down()).getBlock() != Blocks.AIR) {
+                                //System.out.println("catch 1");
+                                BlockPos currentPos = new BlockPos(dx, y, dz);
+                                BlockPos checkBelow = currentPos.down();
+                                BlockPos newWaterPos = new BlockPos(0, 0, 0);
+                                String direction = "";
+                                Boolean doHop = false;
 
-                            if (doHop == true) {
-                                if (currentPos.getX() > pos.getX()) {
-                                    direction = "east";
-                                } else {
-                                    if (currentPos.getX() < pos.getX()) {
-                                        direction = "west";
-                                    } else {
-                                        if (currentPos.getZ() > pos.getZ()) {
-                                            direction = "south";
+                                if (checkBelow != pos.down() && currentPos != pos) {
+                                    if (world.getBlockState(checkBelow).canBucketPlace(Fluids.WATER) && (world.getFluidState(checkBelow).getLevel() != 8)) {
+                                        //System.out.println("catch 2");
+                                        doHop = true;
+                                    }
+                                    if (doHop == true) {
+                                        if (currentPos.getX() > pos.getX()) {
+                                            direction = "east";
                                         } else {
-                                            if (currentPos.getZ() < pos.getZ()) {
-                                                direction = "north";
+                                            if (currentPos.getX() < pos.getX()) {
+                                                direction = "west";
+                                            } else {
+                                                if (currentPos.getZ() > pos.getZ()) {
+                                                    direction = "south";
+                                                } else {
+                                                    if (currentPos.getZ() < pos.getZ()) {
+                                                        direction = "north";
+                                                    }
+                                                }
                                             }
                                         }
-
+                                        if (direction.equals("north")) {
+                                            newWaterPos = pos.north();
+                                        }
+                                        if (direction.equals("south")) {
+                                            newWaterPos = pos.south();
+                                        }
+                                        if (direction.equals("east")) {
+                                            newWaterPos = pos.east();
+                                        }
+                                        if (direction.equals("west")) {
+                                            newWaterPos = pos.west();
+                                        }
+                                        //System.out.println("catch 3");
+                                        if (world.getBlockState(pos).getBlock() == Blocks.WATER && newWaterPos.getY() == pos.getY() && world.getBlockState(newWaterPos).getBlock() == Blocks.AIR) {
+                                            //System.out.println("jumping");
+                                            world.setBlockState(newWaterPos, Fluids.FLOWING_WATER.getFlowing(1, false).getBlockState(), 11);
+                                            world.setBlockState(pos, Blocks.AIR.getDefaultState(), 11);
+                                            didJump = true;
+                                        }
+                                        else {
+                                            doHop = false;
+                                        }
                                     }
                                 }
-
-                                if (direction.equals("north")) {
-                                    newWaterPos = pos.north();
+                                count += 1;
+                                //System.out.println("count " + count);
+                                if (count == currArea && currentRadius <= maxRadius) {
+                                    //System.out.println("expanded radius");
+                                    currentRadius += 1;
                                 }
-                                if (direction.equals("south")) {
-                                    newWaterPos = pos.south();
-                                }
-                                if (direction.equals("east")) {
-                                    newWaterPos = pos.east();
-                                }
-                                if (direction.equals("west")) {
-                                    newWaterPos = pos.west();
-                                }
-                                //System.out.println("catch 3");
-                                if (world.getBlockState(pos).getBlock() == Blocks.WATER && newWaterPos.getY() == pos.getY() && world.getBlockState(newWaterPos).getBlock() == Blocks.AIR) {
-                                    int oldlevel = world.getFluidState(newWaterPos).getLevel();
-                                    //System.out.println("oldlevel " + oldlevel);
-                                    world.setBlockState(newWaterPos, Fluids.FLOWING_WATER.getFlowing(1, false).getBlockState(), 11);
-                                    world.setBlockState(pos, Blocks.AIR.getDefaultState(), 11);
-                                }
-
-
+                                //puddle feature end
                             }
+
                         }
-                        //puddle feature end
                     }
                 }
             }
-        }
-    //}
+
+
+
+
 
 
     public static void addWater(int level, BlockPos pos, WorldAccess world) {
