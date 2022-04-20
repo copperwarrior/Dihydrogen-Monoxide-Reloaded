@@ -7,8 +7,9 @@
     "WaterFluidMixin",
     "FlowingMixin",
     "LavaFluidMixin",
-    "FlowingLavaMixin"
-
+    "FlowingLavaMixin",
+	"MixinServerWorld"
+	
   ],
   "injectors": {
     "defaultRequire": 1

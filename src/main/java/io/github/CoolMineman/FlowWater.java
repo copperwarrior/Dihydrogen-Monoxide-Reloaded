@@ -7,27 +7,38 @@ import java.util.List;
 
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.block.Block;
 import net.minecraft.block.FluidFillable;
+import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.state.property.Properties;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
+import net.minecraft.fluid.Fluid;
+import net.minecraft.fluid.FlowableFluid;
 import net.minecraft.fluid.WaterFluid;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.WorldAccess;
+import net.minecraft.world.BlockView;
 import org.lwjgl.system.CallbackI;
 
 
 public class FlowWater {
     private FlowWater() {
     }
-
-
+	
+	protected static void beforeBreakingBlock(WorldAccess world, BlockPos pos, BlockState state) {
+        BlockEntity blockEntity = state.hasBlockEntity() ? world.getBlockEntity(pos) : null;
+        Block.dropStacks(state, world, pos, blockEntity);
+    }
+	
     public static void flowwater(WorldAccess world, BlockPos fluidPos, FluidState state) {
         if (world.getBlockState(fluidPos).getBlock() instanceof FluidFillable) {
             return;
         }
         if ((world.getBlockState(fluidPos.down()).canBucketPlace(Fluids.WATER)) && (getWaterLevel(fluidPos.down(), world) != 8)) {
             int centerlevel = getWaterLevel(fluidPos, world);
+			beforeBreakingBlock(world, fluidPos, world.getBlockState(fluidPos));
             world.setBlockState(fluidPos, Blocks.AIR.getDefaultState(), 11);
             addWater(centerlevel, fluidPos.down(), world);
         } else {
@@ -37,7 +48,7 @@ public class FlowWater {
             }
             blocks.removeIf(pos -> !world.getBlockState(pos).canBucketPlace(Fluids.WATER));
             Collections.shuffle(blocks);
-            equalizeWater(blocks, fluidPos, world);
+            equalizeWater(blocks, fluidPos, world, state);
         }
     }
 
@@ -161,11 +172,13 @@ public class FlowWater {
                                 if (world.getBlockState(pos).getBlock() == Blocks.WATER && newWaterPos.getY() == pos.getY() && world.getBlockState(newWaterPos).getBlock() == Blocks.AIR) {
                                     //System.out.println("dir: " + direction);
                                     //System.out.println("jumping");
+									BlockState oldWaterState = world.getBlockState(pos);
                                     world.setBlockState(newWaterPos, Fluids.FLOWING_WATER.getFlowing(1, false).getBlockState(), 11);
                                     world.setBlockState(pos, Blocks.AIR.getDefaultState(), 11);
                                     didJump = true;
                                     doHop = false;
                                     direction = "";
+									doErosion(world, pos, newWaterPos, oldWaterState, world.getBlockState(newWaterPos));
                                     //System.out.println("dir2: " + direction);
                                 } else {
                                     doHop = false;
@@ -226,12 +239,14 @@ public class FlowWater {
     }
 
 
-    public static void equalizeWater(ArrayList<BlockPos> blocks, BlockPos center, WorldAccess world ) {
+    public static void equalizeWater(ArrayList<BlockPos> blocks, BlockPos center, WorldAccess world, FluidState fluidState ) {
         int[] waterlevels = new int[4];
         Arrays.fill(waterlevels, -1);
         int centerwaterlevel = getWaterLevel(center, world);
+		int i = 0;
         for (BlockPos block : blocks) {
-            waterlevels[blocks.indexOf(block)] = getWaterLevel(block, world);
+            waterlevels[i] = getWaterLevel(block, world);
+			i++;
         }
 /*        int waterlevelsnum = waterlevels.length;
         int didnothings = 0;
@@ -260,13 +275,7 @@ public class FlowWater {
                             int minLevel = Collections.min(matrixLevels);
                             int range = maxLevel - minLevel;
 
-
-                            if (range == 1) {
-                                method2(blocks, center, world);
-                            }
-                            if (range > 1) {
-                                method1(blocks, center, world);
-                            }
+                            method1(blocks, center, world, fluidState, range);
                             matrixLevels.clear();
                             counter = 0;
                         }
@@ -280,14 +289,21 @@ public class FlowWater {
 
 
 
-    public static void method1(ArrayList<BlockPos> blocks, BlockPos center, WorldAccess world) {
+    public static void method1(ArrayList<BlockPos> blocks, BlockPos center, WorldAccess world, FluidState fluidState, int range) {
 
         int[] waterlevels = new int[4];
         Arrays.fill(waterlevels, -1);
         int centerwaterlevel = getWaterLevel(center, world);
+		int ind = 0;
+		int mod = 1;
+		if (range == 1) {
+			mod = 2;
+		}
         for (BlockPos block : blocks) {
-            waterlevels[blocks.indexOf(block)] = getWaterLevel(block, world);
+            waterlevels[ind] = getWaterLevel(block, world);
+			ind++;
         }
+		ind = 0;
         int waterlevelsnum = waterlevels.length;
         int didnothings = 0;
         int waterlevel;
@@ -296,7 +312,7 @@ public class FlowWater {
             for (int i = 0; i < 4; i++) {
                 waterlevel = waterlevels[i];
                 if (waterlevel != -1) {
-                    if ((centerwaterlevel >= (waterlevel + 1))) {
+                    if ((centerwaterlevel >= (waterlevel + mod))) {
                         waterlevel += 1;
                         waterlevels[i] = waterlevel;
                         centerwaterlevel -= 1;
@@ -309,43 +325,57 @@ public class FlowWater {
             }
         }
         for (BlockPos block : blocks) {
-            int newwaterlevel = waterlevels[blocks.indexOf(block)];
-            setWaterLevel(newwaterlevel, block, world);
+			BlockState state = world.getBlockState(block);
+			int layer = 0;
+			if (state.getBlock() == Blocks.SNOW) {
+				layer = world.getBlockState(block).get(Properties.LAYERS);
+				world.setBlockState(block, Fluids.FLOWING_WATER.getFlowing(layer, false).getBlockState(), 11);
+			}
+			beforeBreakingBlock(world, block, state);
+			int newwaterlevel = Math.max(waterlevels[ind], layer);
+			setWaterLevel(newwaterlevel, block, world);
+			ind++;
         }
         setWaterLevel(centerwaterlevel, center, world);
     }
-    public static void method2(ArrayList<BlockPos> blocks, BlockPos center, WorldAccess world) {
-
-        int[] waterlevels = new int[4];
-        Arrays.fill(waterlevels, -1);
-        int centerwaterlevel = getWaterLevel(center, world);
-        for (BlockPos block : blocks) {
-            waterlevels[blocks.indexOf(block)] = getWaterLevel(block, world);
+	
+	public static void doErosion(WorldAccess world, BlockPos frompos, BlockPos topos, BlockState waterfrom, BlockState waterto) {
+		BlockPos erodetarg;
+		switch (world.getRandom().nextInt(4)) {
+            case 1:  erodetarg = frompos.west();
+                     break;
+            case 2:  erodetarg = frompos.east();
+                     break;
+            case 3:  erodetarg = frompos.south();
+                     break;
+            case 4:  erodetarg = frompos.north();
+                     break;
+            default: erodetarg = frompos.down();
+                     break;
         }
-        int waterlevelsnum = waterlevels.length;
-        int didnothings = 0;
-        int waterlevel;
-
-        while (didnothings < waterlevelsnum) {
-            for (int i = 0; i < 4; i++) {
-                waterlevel = waterlevels[i];
-                if (waterlevel != -1) {
-                    if ((centerwaterlevel >= (waterlevel + 2))) {
-                        waterlevel += 1;
-                        waterlevels[i] = waterlevel;
-                        centerwaterlevel -= 1;
-                    } else {
-                        didnothings += 1;
-                    }
-                } else {
-                    didnothings += 1;
-                }
-            }
-        }
-        for (BlockPos block : blocks) {
-            int newwaterlevel = waterlevels[blocks.indexOf(block)];
-            setWaterLevel(newwaterlevel, block, world);
-        }
-        setWaterLevel(centerwaterlevel, center, world);
-    }
+		BlockState blockStateBelow = world.getBlockState(erodetarg);
+		Block erodeto = null;
+		if (world.getRandom().nextInt(15) == 0) {
+			switch (blockStateBelow.getBlock().getTranslationKey()) {
+				case "block.minecraft.clay":  erodeto = Blocks.AIR;
+						break;
+				case "block.minecraft.sand":  erodeto = Blocks.CLAY;
+						 break;
+				case "block.minecraft.coarse_dirt":  erodeto = Blocks.SAND;
+						 break;
+				case "block.minecraft.dirt":  erodeto = Blocks.COARSE_DIRT;
+						 break;
+				case "block.minecraft.grass_block":  erodeto = Blocks.DIRT;
+						 break;
+				case "block.minecraft.gravel":  erodeto = Blocks.COARSE_DIRT;
+						 break;
+				case "block.minecraft.stone":  erodeto = Blocks.GRAVEL;
+						 break;
+				default: break;
+			}
+			if (erodeto != null) {
+				world.setBlockState(erodetarg, erodeto.getDefaultState(),11);
+			}
+		}
+	}
 }
